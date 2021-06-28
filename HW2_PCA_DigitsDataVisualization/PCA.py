@@ -72,10 +72,10 @@ def showImg(Y:np.ndarray, h=8, w=8, title=''):
 
 def main():
     print('running...')
-    baseX, W, Ytra, Ytra_hat = train('optdigits.tra')
+    baseX, W, Ytra, Ytra_hat = train('data\optdigits.tra')
     showImg(Ytra, 8, 8, title='train origin')
     showImg(Ytra_hat, 8, 8, title='train pca')
-    Ytes, Ytes_hat = test('optdigits.tes', baseX)
+    Ytes, Ytes_hat = test('data\optdigits.tes', baseX)
     showImg(Ytes, 8, 8, title='test origin')
     showImg(Ytes_hat, 8, 8, title='test pca')
     plt.show()
