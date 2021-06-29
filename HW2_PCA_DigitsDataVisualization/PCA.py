@@ -15,15 +15,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def PCA(Y:np.ndarray, p=2):
-    U, S, UT = np.linalg.svd(Y.T)
-    baseX, W = U[:, 0:p].T, np.matmul(np.diag(S[0:p]), UT[0:p, :])
-    Y_hat = np.matmul(W.T, baseX)
-    return baseX, W, Y_hat
-
-def decompose(Y:np.ndarray, baseX):
-    return np.dot(baseX, Y.T)
-
 def readData(file_name):
     datas = []
     with open(file_name, 'r') as f:
@@ -33,16 +24,25 @@ def readData(file_name):
                 datas.append([int(i) for i in line.split(',')[:-1]])
     return np.array(datas)
 
+def PCA(Y:np.ndarray, p=2):
+    U, S, UT = np.linalg.svd(Y.T)
+    baseX, W = U[:, 0:p].T, np.matmul(np.diag(S[0:p]), UT[0:p, :]).T
+    Y_hat = np.matmul(W, baseX)
+    return W, baseX, Y_hat
+
+def reduceDim(Y:np.ndarray, baseX):
+    return np.dot(Y, baseX.T)
+
 def train(file_name):
     Y = readData(file_name)
-    baseX, W, Y_hat = PCA(Y, 2)
-    return baseX, W, Y, Y_hat
+    W, baseX, Y_hat = PCA(Y, 2)
+    return W, baseX, Y, Y_hat
 
 def test(file_name, baseX):
     Y = readData(file_name)
-    W = decompose(Y, baseX)
-    Y_hat = np.dot(W.T, baseX)
-    return Y, Y_hat
+    W = reduceDim(Y, baseX)
+    Y_hat = np.dot(W, baseX)
+    return W, Y, Y_hat
 
 def concatenateData(Y:np.ndarray, h, w):
     n, d = Y.shape
@@ -70,14 +70,26 @@ def showImg(Y:np.ndarray, h=8, w=8, title=''):
     plt.imshow(img)
     # plt.show()
 
+def showPoints(Y:np.ndarray, title=''):
+    n, d = Y.shape[0:2]
+    dim0, dim1 = Y[:, 0], Y[:, 1]
+    plt.figure()
+    plt.title(title)
+    plt.xlabel('first principle component')
+    plt.ylabel('second principle component')
+    plt.scatter(dim0, dim1)
+    # plt.show()
+
 def main():
     print('running...')
-    baseX, W, Ytra, Ytra_hat = train('data\optdigits.tra')
+    Ytra_reduced, baseX, Ytra, Ytra_hat = train('data\optdigits.tra')
     showImg(Ytra, 8, 8, title='train origin')
     showImg(Ytra_hat, 8, 8, title='train pca')
-    Ytes, Ytes_hat = test('data\optdigits.tes', baseX)
+    Ytes_reduced, Ytes, Ytes_hat = test('data\optdigits.tes', baseX)
     showImg(Ytes, 8, 8, title='test origin')
     showImg(Ytes_hat, 8, 8, title='test pca')
+    showPoints(Ytra_reduced, title='train points')
+    showPoints(Ytes_reduced, title='test points')
     plt.show()
     print('done!')
 
