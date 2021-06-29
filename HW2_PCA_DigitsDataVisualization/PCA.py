@@ -33,9 +33,9 @@ def PCA(Y:np.ndarray, p=2):
 def reduceDim(Y:np.ndarray, baseX):
     return np.dot(Y, baseX.T)
 
-def train(file_name):
+def train(file_name, p=2):
     Y = readData(file_name)
-    W, baseX, Y_hat = PCA(Y, 2)
+    W, baseX, Y_hat = PCA(Y, p)
     return W, baseX, Y, Y_hat
 
 def test(file_name, baseX):
@@ -57,10 +57,8 @@ def concatenateData(Y:np.ndarray, h, w):
         tmp = X[i, 0]
         for j in range(1, cols):
             tmp = np.concatenate((tmp, X[i, j]), axis=1)
-        if 0 == i:
-            img = tmp
-        else:
-            img = np.concatenate((img, tmp), axis=0)
+        img = tmp if 0 == i else np.concatenate((img, tmp), axis=0)
+        
     return img
 
 def showImg(Y:np.ndarray, h=8, w=8, title=''):
@@ -71,7 +69,6 @@ def showImg(Y:np.ndarray, h=8, w=8, title=''):
     # plt.show()
 
 def showPoints(Y:np.ndarray, title=''):
-    n, d = Y.shape[0:2]
     dim0, dim1 = Y[:, 0], Y[:, 1]
     plt.figure()
     plt.title(title)
@@ -82,7 +79,7 @@ def showPoints(Y:np.ndarray, title=''):
 
 def main():
     print('running...')
-    Ytra_reduced, baseX, Ytra, Ytra_hat = train('data\optdigits.tra')
+    Ytra_reduced, baseX, Ytra, Ytra_hat = train('data\optdigits.tra', p=2)
     showImg(Ytra, 8, 8, title='train origin')
     showImg(Ytra_hat, 8, 8, title='train pca')
     Ytes_reduced, Ytes, Ytes_hat = test('data\optdigits.tes', baseX)
