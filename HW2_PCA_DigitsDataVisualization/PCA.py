@@ -24,25 +24,35 @@ def readData(file_name):
                 datas.append([int(i) for i in line.split(',')[:-1]])
     return np.array(datas)
 
-def PCA(Y:np.ndarray, p=2):
-    U, S, UT = np.linalg.svd(Y.T)
-    baseX, W = U[:, 0:p].T, np.matmul(np.diag(S[0:p]), UT[0:p, :]).T
-    Y_hat = np.matmul(W, baseX)
-    return W, baseX, Y_hat
+def computeBase(Y, p=2):
+    # K = np.dot(Y.T, Y)
+    # eigenval, eigenvec = np.linalg.eig(K)
+    # idx = np.argsort(eigenval)[::-1][0:p]
+    # baseE = eigenvec[:, idx].T
+    baseE = np.linalg.svd(Y.T)[0][:, 0:p].T
+    return baseE
 
-def reduceDim(Y:np.ndarray, baseX):
-    return np.dot(Y, baseX.T)
+def PCA(X, baseE=None, p=2):
+    if baseE is None:
+        baseE = computeBase(X, p)
+    return np.dot(X, baseE.T)
 
-def train(file_name, p=2):
-    Y = readData(file_name)
-    W, baseX, Y_hat = PCA(Y, p)
-    return W, baseX, Y, Y_hat
+def computeW(K, p=2):
+    # eigenval_K, eigenvec_K = np.linalg.eig(K)
+    # eigenvec_W = eigenvec_K / np.abs(eigenval_K)
+    # cols = np.argsort(eigenval_K)[::-1][0:p]
+    # W = eigenvec_W[:, cols].T
+    U, S, _ = np.linalg.svd(K)
+    W = (U[:, 0:p]/((S[0:p]))).T
+    return W
 
-def test(file_name, baseX):
-    Y = readData(file_name)
-    W = reduceDim(Y, baseX)
-    Y_hat = np.dot(W, baseX)
-    return W, Y, Y_hat
+def kernel0(Y, d=1):
+    return np.dot(Y.T, Y)**d
+
+def KPCA(X, K=None, p=2):
+    if K is None:
+        K = kernel0(X)
+    return np.dot(np.dot(X, K), computeW(K, p).T)
 
 def concatenateData(Y:np.ndarray, h, w):
     n, d = Y.shape
@@ -58,7 +68,6 @@ def concatenateData(Y:np.ndarray, h, w):
         for j in range(1, cols):
             tmp = np.concatenate((tmp, X[i, j]), axis=1)
         img = tmp if 0 == i else np.concatenate((img, tmp), axis=0)
-        
     return img
 
 def showImg(Y:np.ndarray, h=8, w=8, title=''):
@@ -77,17 +86,41 @@ def showPoints(Y:np.ndarray, title=''):
     plt.scatter(dim0, dim1)
     # plt.show()
 
-def main():
-    print('running...')
-    Ytra_reduced, baseX, Ytra, Ytra_hat = train('data\optdigits.tra', p=2)
+def testPCA(p=2):
+    Ytra, Ytes = readData('data\optdigits.tra'), readData('data\optdigits.tes')
+    baseE = computeBase(Ytra, p)
+    Ytra_reduced, Ytes_reduced = PCA(Ytra, baseE), PCA(Ytes, baseE)
+    Ytra_hat, Ytes_hat = np.dot(Ytra_reduced, baseE), np.dot(Ytes_reduced, baseE)
     showImg(Ytra, 8, 8, title='train origin')
     showImg(Ytra_hat, 8, 8, title='train pca')
-    Ytes_reduced, Ytes, Ytes_hat = test('data\optdigits.tes', baseX)
     showImg(Ytes, 8, 8, title='test origin')
     showImg(Ytes_hat, 8, 8, title='test pca')
-    showPoints(Ytra_reduced, title='train points')
-    showPoints(Ytes_reduced, title='test points')
+    showPoints(Ytra_reduced, title='PCA reduced train points')
+    showPoints(Ytes_reduced, title='PCA reduced test points')
+    # plt.show()
+    return Ytra_reduced, Ytes_reduced
+
+def testKPCA(p=2):
+    Ytra, Ytes = readData('data\optdigits.tra'), readData('data\optdigits.tes')
+    K = kernel0(Ytra, d=0.5)
+    Ytra_reduced, Ytes_reduced = KPCA(Ytra, K, p), KPCA(Ytes, K, p)
+    showPoints(Ytra_reduced, title='KPCA reduced train points')
+    showPoints(Ytes_reduced, title='KPCA reduced test points')
+    # plt.show()
+    return Ytra_reduced, Ytes_reduced
+
+def distance(X, Y):
+    assert X.shape == Y.shape
+    dis = np.mean(np.sum((X-Y)**2, axis=1)**0.5)
+    return dis
+
+def main():
+    print('running...')
+    p = 2
+    Ytra_PCA, Ytes_PCA = testPCA(p)
+    Ytra_KPCA, Ytes_KPCA = testKPCA(p)
     plt.show()
+    print('distance:\n', 'train points:', distance(Ytra_PCA, Ytra_KPCA), 'test points', distance(Ytes_PCA, Ytes_KPCA))
     print('done!')
 
 if __name__ == '__main__':
